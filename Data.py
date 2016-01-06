@@ -48,8 +48,3 @@ class datasets:
 		return np.array(d_train), np.array(d_test)
 
 
-if __name__ == '__main__':
-	usps_all = datasets.usps()
-	usps_test, usps_train = datasets.usps_resampled()
-	toy1_train,toy1_test = datasets.toy1(0.05)
-	
