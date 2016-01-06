@@ -14,6 +14,19 @@ class datasets:
 		return data['data'].T
 
 	@staticmethod
+	def mnist():
+		#https://code.google.com/p/kernelmachine/
+		path = os.path.realpath(__file__)
+		file_path = os.path.abspath(os.path.join(path,'../data/mnist_all.mat'))
+		data = loadmat(file_path)
+		d_train = [[] for _ in range(10)]
+		d_test = [[] for _ in range(10)]
+		for i in range(10):
+			d_test[i].extend(np.true_divide(data['test{0}'.format(i)],256))
+			d_train[i].extend(np.true_divide(data['train{0}'.format(i)],256))
+		return d_train, d_test
+
+	@staticmethod
 	def usps_resampled():
 		#Probably won't use this. Will keep this here until we figure out what to do with this
 		#http://www.gaussianprocess.org/gpml/data/
@@ -33,7 +46,7 @@ class datasets:
 			trainLabel = np.where(train_labels == 1)[0][0]
 			testset[testLabel].append(x[i])
 			trainingset[trainLabel].append(xx[i])
-		return np.array(testset), np.array(trainingset)
+		return np.array(trainingset), np.array(testset)
 
 	@staticmethod
 	def toy1(variance):
@@ -46,5 +59,9 @@ class datasets:
 			d_train.extend(np.random.multivariate_normal(mean, cov, 100))
 			d_test.extend(np.random.multivariate_normal(test_mean, cov, 33))
 		return np.array(d_train), np.array(d_test)
+
+train, test = datasets.mnist()
+print(len(test))
+
 
 
