@@ -30,10 +30,9 @@ def read_resampled_data():
 		trainLabel = np.where(train_labels == 1)[0][0]
 		testset[testLabel].append(x[i])
 		trainingset[trainLabel].append(xx[i])
-
 	return np.array(testset), np.array(trainingset)
 
 if __name__ == '__main__':
 	data_all = read_mat_data()
 	data_test, data_train = read_resampled_data()
-	print(len(data_test[10]))
+	
