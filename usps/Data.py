@@ -3,7 +3,7 @@ from scipy.io import loadmat
 import os
 
 
-class datasets():
+class datasets:
 
 	@staticmethod
 	def usps():
