@@ -70,7 +70,6 @@ class datasets:
 			image[max(boxRange)][i] = 1
 			image[i][min(boxRange)] = 1
 			image[i][max(boxRange)] = 1
-		print(image.shape)
 		return image
 
 	@staticmethod
