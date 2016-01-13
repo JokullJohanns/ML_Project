@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.io import loadmat
+from skimage.draw import circle_perimeter
 import os
 
 
@@ -60,8 +61,33 @@ class datasets:
 			d_test.extend(np.random.multivariate_normal(test_mean, cov, 33))
 		return np.array(d_train), np.array(d_test)
 
+	@staticmethod
+	def box(image_size):
+		image = np.zeros((image_size, image_size))
+		boxRange = range(int(image_size*0.2),image_size-int(image_size*0.2))
+		for i in boxRange:
+			image[min(boxRange)][i] = 1
+			image[max(boxRange)][i] = 1
+			image[i][min(boxRange)] = 1
+			image[i][max(boxRange)] = 1
+		print(image.shape)
+		return image
+
+	@staticmethod
+	def half_circle(image_size):
+		circle_center = int(image_size/2)
+		circle_radius = int((circle_center/2)*1.4)
+		img = np.zeros((image_size, image_size), dtype=np.uint8)
+		print(circle_center)
+		rr, cc = circle_perimeter(circle_center, circle_center, circle_radius)
+		img[rr, cc] = 1
+		for i in range(circle_center, image_size):
+			for j in range(0,image_size):
+				img[i][j] = 0
+		return img
+
+
 train, test = datasets.mnist()
-print(len(test))
 
 
 
