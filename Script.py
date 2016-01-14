@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from Data import datasets
 from skimage.util import random_noise
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, KernelPCA
 
 def drawImage(image, shape):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
@@ -23,6 +23,11 @@ def pca_reduce(train_set, test_set, component_count):
     transformed_test = pca.transform(test_set)
     return pca.inverse_transform(transformed_test)
 
+def kernel_pca_reduce(train_set, test_set, component_count):
+    kpca = KernelPCA(kernel="rbf",n_components=component_count, fit_inverse_transform=True, gamma=1)
+    kpca.fit(train_set)
+    transformed_test = kpca.transform(test_set)
+    return kpca.inverse_transform(transformed_test)
 
 def squared_distance(instance1, instance2):
     distance = 0
@@ -33,14 +38,14 @@ def squared_distance(instance1, instance2):
 def calculate_score(data, centers):
     return np.mean([squared_distance(datapoint, center) for datapoint, center in zip(data, centers)])
 
-def generate_toy_example():
+def generate_toy_example(pca_function):
     deviations = [0.05, 0.1, 0.2, 0.4, 0.8]
     features = [i for i in range(1,10)]
     score_matrix = np.zeros((len(deviations),len(features)))
     for dev_i, dev in enumerate(deviations):
         toy1_train, toy1_test, toy1_test_means = datasets.toy1(dev)
         for f_i, feature_count in enumerate(features):
-            denoised_features = pca_reduce(toy1_train, toy1_test, feature_count)
+            denoised_features = pca_function(toy1_train, toy1_test, feature_count)
             score_matrix[dev_i][f_i] = calculate_score(denoised_features, toy1_test_means)
     return score_matrix
 
@@ -52,8 +57,11 @@ if __name__ == '__main__':
     mnist_train, mnist_test = datasets.mnist()
 
 
-    score_matrix = generate_toy_example()
+    linear_pca_score_matrix = generate_toy_example(pca_reduce)
+    kernel_pca_score_matrix = generate_toy_example(kernel_pca_reduce)
 
+    print(kernel_pca_score_matrix/linear_pca_score_matrix)
+    print(linear_pca_score_matrix/kernel_pca_score_matrix)
 
     test_image_size = 16
     image_circle = datasets.half_circle(test_image_size)
