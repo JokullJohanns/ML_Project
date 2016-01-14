@@ -2,6 +2,7 @@ import numpy as np
 from scipy.io import loadmat
 from skimage.draw import circle_perimeter
 import os
+import pickle
 
 
 class datasets:
@@ -50,16 +51,24 @@ class datasets:
 		return np.array(trainingset), np.array(testset)
 
 	@staticmethod
-	def toy1(variance):
+	def toy1(standard_dev):
+		return pickle.load( open("data/toy_data({0}).p".format(standard_dev), "rb"))
+		'''
 		d_train = []
 		d_test = []
 		mean = np.array([0 for _ in range(10)])
-		cov = np.eye(10) * variance
+		cov = np.eye(10) * standard_dev**2
+		test_means = []
 		for i in range(11):
 			test_mean = np.random.uniform(-1.0, 1.0, 10)
+			test_means.extend([test_mean for _ in range(33)])
 			d_train.extend(np.random.multivariate_normal(mean, cov, 100))
 			d_test.extend(np.random.multivariate_normal(test_mean, cov, 33))
-		return np.array(d_train), np.array(d_test)
+		pickle.dump((d_train,d_test,test_means), open("data/toy_data({0}).p".format(standard_dev), "wb"))
+		return np.array(d_train), np.array(d_test), np.array(test_means)
+		'''
+
+
 
 	@staticmethod
 	def box(image_size):
@@ -70,14 +79,13 @@ class datasets:
 			image[max(boxRange)][i] = 1
 			image[i][min(boxRange)] = 1
 			image[i][max(boxRange)] = 1
-		return image
+		return image.flatten()
 
 	@staticmethod
 	def half_circle(image_size):
 		circle_center = int(image_size/2)
 		circle_radius = int((circle_center/2)*1.4)
 		img = np.zeros((image_size, image_size), dtype=np.uint8)
-		print(circle_center)
 		rr, cc = circle_perimeter(circle_center, circle_center, circle_radius)
 		img[rr, cc] = 1
 		for i in range(circle_center, image_size):
