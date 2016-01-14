@@ -6,6 +6,7 @@ from Data import datasets
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from skimage.util import random_noise
+from sklearn.cross_validation import train_test_split
 
 
 def drawImage(image, shape):
@@ -21,14 +22,14 @@ def add_noise(image, noise_type):
     return image
 
 
-# class KernelPCA:
-#     def __init__(self, X, c=1.0):
-#         self.X = X
-#         self.c = c
-#
-#     def K(self, x1, x2, N=1.0):
-#         ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
-#         return np.exp(ret / self.c)
+class KernelPCA:
+    def __init__(self, X, c=1.0):
+        self.X = X
+        self.c = c
+
+    def K(self, x1, x2, N=1.0):
+        ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
+        return np.exp(ret / self.c)
 
 
 
@@ -133,11 +134,27 @@ def calculate_z(X, X_test, no_of_comp):
 # print(X_test)
 
 
-X, X_test = datasets.usps_resampled()
-X = np.array(X[8][0:10])
-X_test = X_test[8][0]
+# X, X_test = datasets.usps_resampled()
+# X = np.vstack([np.array(digit) for digit in X])
+# print(X.shape)
+# quit()
+
+usps_data = datasets.usps()
+data = []
+for i in range(10):
+    data.append(usps_data[i][0:10])
+X = np.vstack(data)
+X = X.astype(float)
+print(X.shape)
+
+X_test = usps_data[0][44]
+#drawImage(X_test, (16, 16))
 X_test = add_noise(X_test, 'gaussian')
-drawImage(X_test, (16, 16))
+#drawImage(X_test, (16, 16))
+X_test = X_test.astype(float)
+
+print(X_test)
+quit()
 
 for i in range(3):
     print("here")
@@ -145,10 +162,14 @@ for i in range(3):
     pz = p_of_z(X, X_test, 1)
     print("p(z) = %s" % pz)
     # print("X_test at iteration %s: %s" % (i, X_test))
-print(X_test)
+#rint(X_test)
 drawImage(X_test, (16, 16))
 
-print(X == X_test)
+counter = 0
+for val in X:
+    if np.array_equal(val, X_test):
+        counter += 1
+print(counter)
 
 
 
