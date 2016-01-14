@@ -2,6 +2,35 @@ import numpy as np
 from scipy import spatial
 from sklearn import preprocessing
 from numpy import linalg
+from Data import datasets
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from skimage.util import random_noise
+
+
+def drawImage(image, shape):
+    plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
+    plt.show()
+
+
+def add_noise(image, noise_type):
+    if noise_type == 'speckle':
+        image = random_noise(image, mode='s&p', salt_vs_pepper=0.5, amount=0.4)
+    elif noise_type == 'gaussian':
+        image = random_noise(image, mode='gaussian', var=0.5)
+    return image
+
+
+# class KernelPCA:
+#     def __init__(self, X, c=1.0):
+#         self.X = X
+#         self.c = c
+#
+#     def K(self, x1, x2, N=1.0):
+#         ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
+#         return np.exp(ret / self.c)
+
+
 
 
 def K(x1, x2, N):
@@ -84,23 +113,46 @@ def calculate_z(X, X_test, no_of_comp):
     for i, line in enumerate(X):
         denominator += gamma(X, X_test, no_of_comp, i) * K(z, X[i, :], 1)
 
-    print("numerator:%s, denominator: %s" % (numerator, denominator))
+    #print("numerator:%s, denominator: %s" % (numerator, denominator))
     return numerator / denominator
 
 
-X = np.array([[1., 2., 3., 6.],
-              [4., 5., 6., 8.],
-              [7., 8., 9., 3.],
-              [10., 11., 12., 3.]])
 
-X_test = [4, 13, 11, 1]
+# X = np.array([[1., 2., 3., 6.],
+#               [4., 5., 6., 8.],
+#               [7., 8., 9., 3.],
+#               [10., 11., 12., 3.]])
+#
+# X_test = [4, 13, 11, 1]
+#
+# for i in range(10):
+#     X_test = calculate_z(X, X_test, 4)
+#     pz = p_of_z(X, X_test, 4)
+#     print("p(z) = %s" % pz)
+#     print("X_test at iteration %s: %s" % (i, X_test))
+# print(X_test)
 
-for i in range(10):
-    X_test = calculate_z(X, X_test, 4)
-    pz = p_of_z(X, X_test, 4)
+
+X, X_test = datasets.usps_resampled()
+X = np.array(X[8][0:10])
+X_test = X_test[8][0]
+X_test = add_noise(X_test, 'gaussian')
+drawImage(X_test, (16, 16))
+
+for i in range(3):
+    print("here")
+    X_test = calculate_z(X, X_test, 1)
+    pz = p_of_z(X, X_test, 1)
     print("p(z) = %s" % pz)
-    print("X_test at iteration %s: %s" % (i, X_test))
+    # print("X_test at iteration %s: %s" % (i, X_test))
 print(X_test)
+drawImage(X_test, (16, 16))
+
+print(X == X_test)
+
+
+
+
 
 
 # eigen_decomp(X)
