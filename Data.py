@@ -4,6 +4,7 @@ from skimage.draw import circle_perimeter
 from skimage.util import random_noise
 import os
 import pickle
+import math
 from sklearn.datasets import fetch_mldata
 from sklearn.cross_validation import train_test_split
 
@@ -104,27 +105,28 @@ class datasets:
 
 
 	@staticmethod
-	def box(image_size):
-		image = np.zeros((image_size, image_size))
-		boxRange = range(int(image_size*0.2),image_size-int(image_size*0.2))
-		for i in boxRange:
-			image[min(boxRange)][i] = 1
-			image[max(boxRange)][i] = 1
-			image[i][min(boxRange)] = 1
-			image[i][max(boxRange)] = 1
-		return image.flatten()
+	def square():
+		square = []
+		for i in range(100):
+			square.append([0, i/100])
+		for i in range(100):
+			square.append([i/100, 1])
+		for i in range(100):
+			square.append([1, 1 - i/100])
+		for i in range(101):
+			square.append([1 - i/100, 0])
+		return square
+
 
 	@staticmethod
-	def half_circle(image_size):
-		circle_center = int(image_size/2)
-		circle_radius = int((circle_center/2)*1.4)
-		img = np.zeros((image_size, image_size), dtype=np.uint8)
-		rr, cc = circle_perimeter(circle_center, circle_center, circle_radius)
-		img[rr, cc] = 1
-		for i in range(circle_center, image_size):
-			for j in range(0,image_size):
-				img[i][j] = 0
-		return img
+	def half_circle():
+		circle_center = [0, 0]
+		circle_radius = 1
+		circle = []
+		for i in range(200):
+			theta = i/200 * math.pi
+			circle.append([circle_center[0] + circle_radius * math.cos(theta), circle_center[1] + circle_radius * math.sin(theta)])
+		return circle
 
 
 train, test = datasets.mnist()

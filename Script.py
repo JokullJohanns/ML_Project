@@ -41,6 +41,57 @@ def generate_toy_example(pca_function):
             score_matrix[dev_i][f_i] = calculate_score(denoised_features, toy1_test_means)
     return score_matrix
 
+
+def add_2D_noise(image, noise_area = [0, 1, 0, 1]):
+    noisy_image = list(image)
+    for i in range(100):
+        noisy_image.append([np.random.uniform(noise_area[0], noise_area[1]), np.random.uniform(noise_area[2], noise_area[3])])
+    return noisy_image
+
+
+def toy2():
+    toy2circle(kernel_pca_reduce, 4)
+    #toy2square(kernel_pca_reduce, 4)
+
+
+def toy2circle(pca_function, features):
+    axis = [-1.2, 1.2, -.2, 1.2]
+    halfcircle = datasets.half_circle()
+    noisy_halfcircle = add_2D_noise(halfcircle, axis)
+
+    denoised_halfcircle = pca_function(halfcircle, noisy_halfcircle, features)
+
+    halfcircle = np.array(halfcircle)
+    noisy_halfcircle = np.array(noisy_halfcircle)
+
+    plottoy2figure(halfcircle, noisy_halfcircle, denoised_halfcircle, axis)
+
+
+def toy2square(pca_function, features):
+    axis = [-.3, 1.3, -.3, 1.3]
+    square = datasets.square()
+    noisy_square = add_2D_noise(square, axis)
+
+    denoised_square = pca_function(square, noisy_square, features)
+
+    square = np.array(square)
+    noisy_square = np.array(noisy_square)
+
+    plottoy2figure(square, noisy_square, denoised_square, axis)
+
+
+def plottoy2figure(original, noisy, denoised, axis = [0, 1, 0, 1]):
+    plt.figure(1)
+    plt.axis(axis)
+    plt.plot(noisy[:,0], noisy[:,1], 'o')
+
+    plt.figure(2)
+    plt.axis(axis)
+    plt.plot(original[:,0], original[:,1], 'ok')
+    plt.plot(denoised[:,0], denoised[:,1], 'or')
+    plt.show()
+
+
 def reduce_noise(train, test, components_n=256):
     training_set = []
     test_set = []
@@ -59,13 +110,15 @@ def reduce_noise(train, test, components_n=256):
 
 
 if __name__ == '__main__':
+    """
     TRAINING_COUNT = 300
     usps_all = datasets.usps()
     usps_train, noisy_usps_test = datasets.usps(noise_type='speckle')
     denoised_test = reduce_noise(usps_train, noisy_usps_test)
     drawImage(noisy_usps_test[3][0],(16,16))
     drawImage(denoised_test[3][0],(16,16))
-
+    """
+    toy2()
     quit()
     linear_pca_score_matrix = generate_toy_example(pca_reduce)
     kernel_pca_score_matrix = generate_toy_example(kernel_pca_reduce)
