@@ -4,9 +4,15 @@ from skimage.draw import circle_perimeter
 from skimage.util import random_noise
 import os
 import pickle
+from sklearn.datasets import fetch_mldata
 
 
 class datasets:
+
+	@staticmethod
+	def usps_scikit():
+		usps = fetch_mldata('usps')
+		return usps.data, usps.target
 
 	@staticmethod
 	def usps(noise_type=None):
