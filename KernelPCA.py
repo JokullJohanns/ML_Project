@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 from scipy import spatial
 from sklearn import preprocessing
@@ -7,9 +8,18 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from skimage.util import random_noise
 from sklearn.cross_validation import train_test_split
+from time import time
+
+
+
+
+class kernel_utils:
+    def __init__(self, X):
+        self.scaler = preprocessing.StandardScaler(with_std=False).fit(X)
 
 
 def drawImage(image, shape=(16, 16), title=""):
+    image = image.astype(float)
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
     plt.title(title)
     plt.show()
@@ -24,34 +34,34 @@ def add_noise(image, noise_type):
 
 
 def K(x1, x2, N):
-    c = 1.0  # TODO: change c to something different than 1.0
-    ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
-    return np.exp(ret / c)
-
-
-def centering_input_data(X):
-    scaler = preprocessing.StandardScaler(with_std=False).fit(X)
-    return scaler.transform(X)
+    c = 1000  # TODO: change c to something different than 1.0
+    ret = -1.0 * spatial.distance.sqeuclidean(x1, x2)
+    return np.exp(ret / c) / N
 
 
 def calculate_kernel_matrix(X):
     num_data_points = X.shape[0]
     k_matrix = np.zeros([X.shape[0], X.shape[0]])
-    for i, line_i in enumerate(X):
-        for j, line_j in enumerate(X):
-            k_matrix[i, j] = K(line_i, line_j, num_data_points)
+    for i in range(num_data_points):
+        for j in range(num_data_points):
+            k_matrix[i, j] = K(X[i], X[j], num_data_points)
+    # drawImage(k_matrix, shape=(256, 256))
+    # quit()
     return k_matrix
 
 
 def centered_kernel_matrix(X):
     num_data_points = X.shape[0]
-    cen_X = centering_input_data(X)
-    k_matrix = calculate_kernel_matrix(cen_X)
+    k_matrix = calculate_kernel_matrix(X)
+    return k_matrix
     cen_k_matrix = np.zeros(k_matrix.shape)
-    for i, line in enumerate(k_matrix):
-        for j, _ in enumerate(line):
-            cen_k_matrix[i, j] = k_matrix[i, j] - np.sum(k_matrix[i, :]) / num_data_points - np.sum(
-                    k_matrix[j, :]) / num_data_points + np.sum(k_matrix) / num_data_points ** 2
+    for index_i in range(num_data_points):
+        for index_j in range(num_data_points):
+            cen_k_matrix[index_i, index_j] = \
+                k_matrix[index_i, index_j] - \
+                (np.sum(k_matrix[index_i, :]) / num_data_points) - \
+                (np.sum(k_matrix[index_j, :]) / num_data_points) + \
+                (np.sum(k_matrix) / (num_data_points ** 2))
     return cen_k_matrix
 
 
@@ -61,18 +71,18 @@ def eigen_decomp(X):
     idx = eig_val.argsort()[::-1]
     eig_val_sorted = eig_val[idx]
     eig_vec_sorted = eig_vec[:, idx]
-    #print(eig_vec_sorted)
     return eig_vec_sorted, cen_k_matrix
 
 
 def beta_test_point(X, X_test, no_of_comp):
-    cen_X = centering_input_data(X)
+    # cen_X = centering_input_data(X)
     num_data_points = X.shape[0]
     beta = np.zeros((no_of_comp, 1))
     eig_vec_sorted, cen_k_matrix = eigen_decomp(X)
     for k in range(no_of_comp):
         for i in range(num_data_points):
-            beta[k] = beta[k] + eig_vec_sorted[i][k] * K(X_test, cen_X[i, :], 1)
+            # beta[k] = beta[k] + eig_vec_sorted[i][k] * K(X_test, cen_X[i, :], 1)
+            beta[k] = beta[k] + eig_vec_sorted[i][k] * K(X_test, X[i, :], 1)
     return beta, eig_vec_sorted
 
 
@@ -130,25 +140,29 @@ def calculate_z(X, X_test, no_of_comp):
 # print(X.shape)
 # quit()
 
+
+# Prepare the data
+train_count = 256
 usps_data, usps_target = datasets.usps_scikit()
-
 X_train, X_test, Y_train, Y_test = train_test_split(usps_data, usps_target, train_size=0.7, random_state=42)
+X = X_train[0:train_count]
 X_test = X_test[0]
-X_test = add_noise(X_test, 'speckle')
 true_label = Y_test[0]
-X = X_train[0:100, :]
-
-drawImage(X_test, title=true_label)
+drawImage(X_test, title="Before noise")
+X_test = add_noise(X_test, 'speckle')
+drawImage(X_test, title="After noise")
 
 
 for i in range(3):
+    start_time = time()
     print("iteration %s" % i)
     X_test = calculate_z(X, X_test, 1)
     pz = p_of_z(X, X_test, 1)
     #print("p(z) = %s" % pz)
     # print("X_test at iteration %s: %s" % (i, X_test))
-#rint(X_test)
-drawImage(X_test, (16, 16), true_label)
+    print("iteration %s took %.01f" % (i+1, time() - start_time))
+#print(X_test)
+drawImage(X_test, (16, 16), "%s: recovered" % true_label)
 
 counter = 0
 for val in X:
