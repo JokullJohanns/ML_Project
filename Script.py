@@ -2,20 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from Data import datasets
-from skimage.util import random_noise
+
 from sklearn.decomposition import PCA, KernelPCA
 
 def drawImage(image, shape):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
     plt.show()
-
-
-def add_noise(image, noise_type):
-    if noise_type == 'speckle':
-        image = random_noise(image, mode='s&p', salt_vs_pepper=0.5, amount=0.4)
-    elif noise_type == 'gaussian':
-        image = random_noise(image, mode='gaussian', var=0.5)
-    return image
 
 def pca_reduce(train_set, test_set, component_count):
     pca = PCA(n_components=component_count)
@@ -24,7 +16,7 @@ def pca_reduce(train_set, test_set, component_count):
     return pca.inverse_transform(transformed_test)
 
 def kernel_pca_reduce(train_set, test_set, component_count):
-    kpca = KernelPCA(kernel="rbf",n_components=component_count, fit_inverse_transform=True, gamma=1)
+    kpca = KernelPCA(kernel="rbf",n_components=component_count, fit_inverse_transform=True)
     kpca.fit(train_set)
     transformed_test = kpca.transform(test_set)
     return kpca.inverse_transform(transformed_test)
@@ -49,6 +41,18 @@ def generate_toy_example(pca_function):
             score_matrix[dev_i][f_i] = calculate_score(denoised_features, toy1_test_means)
     return score_matrix
 
+def test_noise_reduction():
+    noisy_usps_train, noisy_usps_test = datasets.usps_resampled(noise_type="gaussian")
+    usps_train, usps_test = datasets.usps_resampled()
+    training_set = []
+    test_set = []
+    for i in range(0, 10):
+        training_set.extend(usps_train[i][0:300])
+        test_set.extend(noisy_usps_test[i][0:300])
+    usps_test_denoised = kernel_pca_reduce(training_set, test_set, 100)
+    drawImage(test_set[900],(16,16))
+    drawImage(usps_test_denoised[900],(16,16))
+
 
 if __name__ == '__main__':
     usps_all = datasets.usps()
@@ -56,7 +60,7 @@ if __name__ == '__main__':
     toy1_train, toy1_test, toy1_test_means = datasets.toy1(0.05)
     mnist_train, mnist_test = datasets.mnist()
 
-
+    test_noise_reduction()
     linear_pca_score_matrix = generate_toy_example(pca_reduce)
     kernel_pca_score_matrix = generate_toy_example(kernel_pca_reduce)
 
@@ -69,7 +73,6 @@ if __name__ == '__main__':
     #drawImage(image_box,(test_image_size,test_image_size))
     #drawImage(image_circle,(test_image_size,test_image_size))
 
-    noisy_image=add_noise(usps_test[8][0], 'gaussian')
     #drawImage(noisy_image,(16,16))
     #drawImage(usps_test[8][0],(16,16))
     #drawImage(mnist_train[8][0],(28,28))

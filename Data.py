@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.io import loadmat
 from skimage.draw import circle_perimeter
+from skimage.util import random_noise
 import os
 import pickle
 
@@ -8,15 +9,18 @@ import pickle
 class datasets:
 
 	@staticmethod
-	def usps():
+	def usps(noise_type=None):
 		#http://www.cs.nyu.edu/~roweis/data.html
 		path = os.path.realpath(__file__)
 		file_path = os.path.abspath(os.path.join(path,'../data/usps_all.mat'))
 		data = loadmat(file_path)
-		return data['data'].T
+		if noise_type:
+			return np.array(datasets.add_noise(data['data'].T,noise_type))
+		else:
+			return np.array(data['data'].T)
 
 	@staticmethod
-	def mnist():
+	def mnist(noise_type=None):
 		#https://code.google.com/p/kernelmachine/
 		path = os.path.realpath(__file__)
 		file_path = os.path.abspath(os.path.join(path,'../data/mnist_all.mat'))
@@ -26,10 +30,13 @@ class datasets:
 		for i in range(10):
 			d_test[i].extend(np.true_divide(data['test{0}'.format(i)],256))
 			d_train[i].extend(np.true_divide(data['train{0}'.format(i)],256))
-		return d_train, d_test
+		if noise_type:
+			return np.array(datasets.add_noise(d_train,noise_type)), np.array(datasets.add_noise(d_test,noise_type))
+		else:
+			return np.array(d_train), np.array(d_test)
 
 	@staticmethod
-	def usps_resampled():
+	def usps_resampled(noise_type=None):
 		#Probably won't use this. Will keep this here until we figure out what to do with this
 		#http://www.gaussianprocess.org/gpml/data/
 		path = os.path.realpath(__file__)
@@ -48,7 +55,20 @@ class datasets:
 			trainLabel = np.where(train_labels == 1)[0][0]
 			testset[testLabel].append(x[i])
 			trainingset[trainLabel].append(xx[i])
-		return np.array(trainingset), np.array(testset)
+		if noise_type:
+			return np.array(datasets.add_noise(trainingset,noise_type)), np.array(datasets.add_noise(testset,noise_type))
+		else:
+			return np.array(trainingset), np.array(testset)
+
+	@staticmethod
+	def add_noise(dataset, noise_type):
+		for i,nr in enumerate(dataset):
+			for j,image in enumerate(nr):
+				if noise_type == 'speckle':
+					dataset[i][j] = random_noise(dataset[i][j], mode='s&p', salt_vs_pepper=0.5, amount=0.4)
+				elif noise_type == 'gaussian':
+					dataset[i][j] = random_noise(dataset[i][j], mode='gaussian', var=0.5)
+		return dataset
 
 	@staticmethod
 	def toy1(standard_dev):
