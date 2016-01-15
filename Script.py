@@ -16,7 +16,7 @@ def pca_reduce(train_set, test_set, component_count):
     return pca.inverse_transform(transformed_test)
 
 def kernel_pca_reduce(train_set, test_set, component_count):
-    kpca = KernelPCA(kernel="rbf",n_components=component_count, fit_inverse_transform=True)
+    kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True)
     kpca.fit(train_set)
     transformed_test = kpca.transform(test_set)
     return kpca.inverse_transform(transformed_test)
@@ -41,35 +41,41 @@ def generate_toy_example(pca_function):
             score_matrix[dev_i][f_i] = calculate_score(denoised_features, toy1_test_means)
     return score_matrix
 
-def test_noise_reduction():
-    noisy_usps_train, noisy_usps_test = datasets.usps_resampled(noise_type="gaussian")
-    usps_train, usps_test = datasets.usps_resampled()
+def reduce_noise(train, test, components_n=256):
     training_set = []
     test_set = []
+
+    #join the data into one array for training
     for i in range(0, 10):
-        training_set.extend(usps_train[i][0:300])
-        test_set.extend(noisy_usps_test[i][0:300])
-    usps_test_denoised = kernel_pca_reduce(training_set, test_set, 100)
-    drawImage(test_set[900],(16,16))
-    drawImage(usps_test_denoised[900],(16,16))
+        training_set.extend(train[i][0:TRAINING_COUNT])
+        test_set.extend(test[i][0:TRAINING_COUNT])
+    denoised = kernel_pca_reduce(training_set, test_set, components_n)
+    test_denoised = []
+
+    #reshape the array back to normal
+    for i in range(0,TRAINING_COUNT*10,TRAINING_COUNT):
+        test_denoised.append(denoised[i:i+TRAINING_COUNT])
+    return test_denoised
 
 
 if __name__ == '__main__':
+    TRAINING_COUNT = 300
     usps_all = datasets.usps()
-    usps_train, usps_test = datasets.usps_resampled()
-    toy1_train, toy1_test, toy1_test_means = datasets.toy1(0.05)
-    mnist_train, mnist_test = datasets.mnist()
+    usps_train, noisy_usps_test = datasets.usps(noise_type='speckle')
+    denoised_test = reduce_noise(usps_train, noisy_usps_test)
+    drawImage(noisy_usps_test[3][0],(16,16))
+    drawImage(denoised_test[3][0],(16,16))
 
-    test_noise_reduction()
+    quit()
     linear_pca_score_matrix = generate_toy_example(pca_reduce)
     kernel_pca_score_matrix = generate_toy_example(kernel_pca_reduce)
 
     print(kernel_pca_score_matrix/linear_pca_score_matrix)
     print(linear_pca_score_matrix/kernel_pca_score_matrix)
 
-    test_image_size = 16
-    image_circle = datasets.half_circle(test_image_size)
-    image_box = datasets.box(test_image_size)
+    #test_image_size = 16
+    #image_circle = datasets.half_circle(test_image_size)
+    #image_box = datasets.box(test_image_size)
     #drawImage(image_box,(test_image_size,test_image_size))
     #drawImage(image_circle,(test_image_size,test_image_size))
 

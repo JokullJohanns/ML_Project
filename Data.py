@@ -5,7 +5,7 @@ from skimage.util import random_noise
 import os
 import pickle
 from sklearn.datasets import fetch_mldata
-
+from sklearn.cross_validation import train_test_split
 
 class datasets:
 
@@ -16,14 +16,21 @@ class datasets:
 
 	@staticmethod
 	def usps(noise_type=None):
-		#http://www.cs.nyu.edu/~roweis/data.html
-		path = os.path.realpath(__file__)
-		file_path = os.path.abspath(os.path.join(path,'../data/usps_all.mat'))
-		data = loadmat(file_path)
+		usps = fetch_mldata('usps')
+		train_dataset = [[] for _ in range(10)]
+		test_dataset = [[] for _ in range(10)]
+		X_train, X_test, Y_train, Y_test = train_test_split(usps.data, usps.target, train_size=0.7, random_state=42)
+		for i, nr in enumerate(Y_train):
+			train_dataset[nr-1].extend([X_train[i]])
+
+		for i, nr in enumerate(Y_test):
+			test_dataset[nr-1].extend([X_test[i]])
+
+		train_dataset = np.array(train_dataset)
+		test_dataset = np.array(test_dataset)
 		if noise_type:
-			return np.array(datasets.add_noise(data['data'].T,noise_type))
-		else:
-			return np.array(data['data'].T)
+			return train_dataset, datasets.add_noise(test_dataset,noise_type)
+		return train_dataset, test_dataset
 
 	@staticmethod
 	def mnist(noise_type=None):
@@ -37,7 +44,7 @@ class datasets:
 			d_test[i].extend(np.true_divide(data['test{0}'.format(i)],256))
 			d_train[i].extend(np.true_divide(data['train{0}'.format(i)],256))
 		if noise_type:
-			return np.array(datasets.add_noise(d_train,noise_type)), np.array(datasets.add_noise(d_test,noise_type))
+			return np.array(d_train), np.array(datasets.add_noise(d_test,noise_type))
 		else:
 			return np.array(d_train), np.array(d_test)
 
@@ -62,7 +69,7 @@ class datasets:
 			testset[testLabel].append(x[i])
 			trainingset[trainLabel].append(xx[i])
 		if noise_type:
-			return np.array(datasets.add_noise(trainingset,noise_type)), np.array(datasets.add_noise(testset,noise_type))
+			return np.array(trainingset), np.array(datasets.add_noise(testset,noise_type))
 		else:
 			return np.array(trainingset), np.array(testset)
 
