@@ -11,7 +11,7 @@ class datasets:
 
 	@staticmethod
 	def usps_scikit():
-		usps = fetch_mldata('usps')
+		usps = fetch_mldata('usps', data_home="mldata")
 		return usps.data, usps.target
 
 	@staticmethod
