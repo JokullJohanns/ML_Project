@@ -9,8 +9,9 @@ from skimage.util import random_noise
 from sklearn.cross_validation import train_test_split
 
 
-def drawImage(image, shape):
+def drawImage(image, shape=(16, 16), title=""):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
+    plt.title(title)
     plt.show()
 
 
@@ -22,20 +23,8 @@ def add_noise(image, noise_type):
     return image
 
 
-class KernelPCA:
-    def __init__(self, X, c=1.0):
-        self.X = X
-        self.c = c
-
-    def K(self, x1, x2, N=1.0):
-        ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
-        return np.exp(ret / self.c)
-
-
-
-
 def K(x1, x2, N):
-    c = 1.0
+    c = 1.0  # TODO: change c to something different than 1.0
     ret = -1.0 * spatial.distance.sqeuclidean(x1, x2) / N
     return np.exp(ret / c)
 
@@ -119,6 +108,8 @@ def calculate_z(X, X_test, no_of_comp):
 
 
 
+# SIMPLE TEST
+
 # X = np.array([[1., 2., 3., 6.],
 #               [4., 5., 6., 8.],
 #               [7., 8., 9., 3.],
@@ -139,31 +130,25 @@ def calculate_z(X, X_test, no_of_comp):
 # print(X.shape)
 # quit()
 
-usps_data = datasets.usps()
-data = []
-for i in range(10):
-    data.append(usps_data[i][0:10])
-X = np.vstack(data)
-X = X.astype(float)
-print(X.shape)
+usps_data, usps_target = datasets.usps_scikit()
 
-X_test = usps_data[0][44]
-#drawImage(X_test, (16, 16))
-X_test = add_noise(X_test, 'gaussian')
-#drawImage(X_test, (16, 16))
-X_test = X_test.astype(float)
+X_train, X_test, Y_train, Y_test = train_test_split(usps_data, usps_target, train_size=0.7, random_state=42)
+X_test = X_test[0]
+X_test = add_noise(X_test, 'speckle')
+true_label = Y_test[0]
+X = X_train[0:100, :]
 
-print(X_test)
-quit()
+drawImage(X_test, title=true_label)
+
 
 for i in range(3):
-    print("here")
+    print("iteration %s" % i)
     X_test = calculate_z(X, X_test, 1)
     pz = p_of_z(X, X_test, 1)
-    print("p(z) = %s" % pz)
+    #print("p(z) = %s" % pz)
     # print("X_test at iteration %s: %s" % (i, X_test))
 #rint(X_test)
-drawImage(X_test, (16, 16))
+drawImage(X_test, (16, 16), true_label)
 
 counter = 0
 for val in X:
