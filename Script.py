@@ -7,6 +7,7 @@ from new_KernelPCA import de_noise_image
 
 def drawImage(image, shape):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys_r)
+    plt.axis('off')
     plt.show()
 
 def saveImage(image, shape, name):
@@ -130,7 +131,7 @@ def reduce_noise(train, test, components_n=256):
         test_denoised.append(denoised[i:i+TRAINING_COUNT])
     return test_denoised
 
-def generate_example2_new():
+def generate_figure4():
     usps_data = datasets.usps_stored()
 
     print("Starting to generate number images")
@@ -167,6 +168,26 @@ def generate_example2_new():
             #drawImage(kernel_gaussian_numbers[nr],(16,16))
             saveImage(kernel_gaussian_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"kernelPCA","gaussian"))
 
+def generate_figure3():
+    usps_data = datasets.usps_stored()
+    scores = []
+    saveImage(usps_data["test_clean"][2],(16,16),"data/fraction_usps/three_clean.png")
+    for comp_count in range(1,21):
+        print("Starting training for {0} components for number 3".format(comp_count))
+        pca_denoised = pca_reduce(usps_data["train"], usps_data["test_gaussian"],comp_count)
+        pca_score = np.sum((pca_denoised[2]-usps_data["test_clean"][2])**2)
+
+        kernel_pca_denoised = kernel_pca_reduce(usps_data["train"], usps_data["test_gaussian"],comp_count)
+        kernel_pca_score = np.sum((kernel_pca_denoised[2]-usps_data["test_clean"][2])**2)
+        final_score = pca_score/kernel_pca_score
+        scores.append(round(final_score,2))
+        saveImage(pca_denoised[2],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('linearPCA',comp_count))
+        saveImage(kernel_pca_denoised[2],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('kernelPCA',comp_count))
+
+    f = open("data/fraction_usps/scores.txt","w")
+    f.write("&  \\tiny{"+"}\n &  \\tiny{".join(map(str, scores))+"}")
+
+
 
 if __name__ == '__main__':
     """
@@ -177,9 +198,10 @@ if __name__ == '__main__':
     drawImage(noisy_usps_test[3][0],(16,16))
     drawImage(denoised_test[3][0],(16,16))
     """
-    
+
+    generate_figure3()
     #toy1()
-    generate_example2_new()
+    #generate_figure4()
     quit()
 
     #test_image_size = 16
