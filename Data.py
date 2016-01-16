@@ -95,11 +95,11 @@ class datasets:
 		for i in range(NOcenters):
 			center = np.random.uniform(-1.0, 1.0, dimensions)
 			centers.extend([center for _ in range(33)])
-			train.extend(np.random.multivariate_normal(center, cov, 100))
+			train.extend(np.random.multivariate_normal(center, cov, 10))
 			test.extend(np.random.multivariate_normal(center, cov, 33))
 		#pickle.dump((train,test,centers), open("data/toy_data({0}).p".format(standard_dev), "wb"))
 		return np.array(train), np.array(test), np.array(centers)		
-
+		
 
 	@staticmethod
 	def square():

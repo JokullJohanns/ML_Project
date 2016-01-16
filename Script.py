@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from Data import datasets
 from sklearn.decomposition import PCA, KernelPCA
+from new_KernelPCA import de_noise_image
 
 def drawImage(image, shape):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
@@ -35,8 +36,8 @@ def squared_distance(instance1, instance2):
 
 
 def toy1():
-    linear_pca_score_matrix = generate_score_matrix(pca_reduce, 11)
-    kernel_pca_score_matrix = generate_score_matrix(kernel_pca_reduce, 11)
+    linear_pca_score_matrix = generate_score_matrix(pca_reduce)
+    kernel_pca_score_matrix = generate_score_matrix(de_noise_image)
 
     print(linear_pca_score_matrix)
     print(kernel_pca_score_matrix)
@@ -50,7 +51,7 @@ def generate_score_matrix(pca_function, NOcenters = 11):
     for dev_i, dev in enumerate(deviations):
         train, test, centers = datasets.toy1(dev, NOcenters)
         for f_i, feature_count in enumerate(features):
-            denoised_test = pca_function(train, test, feature_count) # Optional: include parameter 'dev'. Only affects KPCA. Seems to yield worse results.
+            denoised_test = pca_function(train, test, feature_count, 5) # Optional: include parameter 'dev'. Only affects KPCA. Seems to yield worse results.
             score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
     return score_matrix
 
