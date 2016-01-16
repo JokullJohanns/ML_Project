@@ -36,14 +36,16 @@ def add_noise(image, noise_type):
 
 @numba.jit(nopython=True)
 def K(x, y, N=1.0, std_dev=-999):
-    c = 0.5
-    if std_dev == -999:
-        c = 0.5
-    else:
-        c = 2.0 * (std_dev * std_dev)
+    c = 9.0
+    # if std_dev == -999:
+    #     c = 0.5
+    # else:
+    #     c = 2.0 * (std_dev * std_dev)
     # ret = -1.0 * spatial.distance.sqeuclidean(x, y)
-    ret = -1.0 * np.sum(np.power(x-y, 2))
-    ret = np.exp(ret / (c) / N
+
+    ret = -1.0 * np.sum(np.power((x-y), 2))
+    #ret = -1.0 * (np.power(np.linalg.norm(x-y), 2))
+    ret = np.exp(ret / c) / N
     return ret
 
 
@@ -141,6 +143,7 @@ def p_of_z(X, z, std_dev=-999):
 
 
 def de_noise_image_multiple(X_train, X_test, num_components, num_iterations, std_dev=-999):
+    print("starting with num compontents: %s, num iterations: %s, std dev: %s" % (num_components, num_iterations, std_dev))
     results = np.zeros(X_test.shape)
 
     for index in range(X_test.shape[0]):
@@ -168,12 +171,12 @@ def de_noise_image(X_train, X_test, num_components, num_iterations, std_dev=-999
     for i in range(num_iterations):
         print("Starting on iteration %s" % i)
         z = calculate_z(X_train, test_image, z, num_components, i, std_dev)
-        # pz = p_of_z(X_train, z, std_dev)
-        # if current_pz is None:
-        #     current_pz = pz
-        # else:
-        #     if current_pz <= pz or pz is np.nan:
-        #         break
+        pz = p_of_z(X_train, z, std_dev)
+        if current_pz is None:
+            current_pz = pz
+        else:
+            if current_pz <= pz or pz is np.nan:
+                break
     return z
 
 
@@ -181,18 +184,22 @@ def de_noise_image(X_train, X_test, num_components, num_iterations, std_dev=-999
 if __name__ == '__main__':
     train_count = 400
     test_data_point = 12
-    num_components = 256
-    num_iterations = 10
+    num_components = 1
+    num_iterations = 1000
 
     usps_data, usps_target = datasets.usps_scikit()
     X_train, X_test, Y_train, Y_test = train_test_split(usps_data, usps_target, train_size=0.7, random_state=42)
     X = X_train[0:train_count]
     true_label = Y_test[test_data_point] - 1
     clean_image = X_test[test_data_point]
-    drawImage(clean_image, title="%s initial" % (true_label), dontDraw=True)
+    drawImage(clean_image, title="%s initial" % (true_label), dontDraw=False)
 
-    noisy_image = add_noise(clean_image, 'speckle')
-    drawImage(noisy_image, title="%s noised" % (true_label), dontDraw=True)
+    cindy_data = datasets.usps_stored_test()
+    noisy_image = cindy_data[5]*-1
+
+    #noisy_image = add_noise(clean_image, 'speckle')
+    drawImage(noisy_image, title="%s noised" % (true_label), dontDraw=False)
 
     de_noised_image = de_noise_image(X, noisy_image, num_components, num_iterations)
-    drawImage(de_noised_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=True)
+    drawImage(de_noised_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
+
