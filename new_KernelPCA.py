@@ -21,7 +21,6 @@ def drawImage(image, shape=(16, 16), title="", dontDraw=False, ):
     plt.title(title)
     if not dontDraw:
         plt.show()
-        plt.close()
     else:
         plt.savefig("figures/%s.png" % title)
 
@@ -125,6 +124,34 @@ def p_of_z(X, X_test, no_of_comp):
     return ret  # TODO: add Omega value
 
 
+def de_noise_image_multiple(X_train, X_test, num_components, num_iterations):
+    iX = np.copy(X_train)
+
+    results = np.zeros(X_test.shape)
+
+    for index in range(X_test.shape[0]):
+        print("****** starting on test image %s ******" % (index))
+        current_z = None
+        test_image = np.copy(X_test[index])
+        for i in range(num_iterations):
+            start_time = time()
+            print("iteration %s" % (i+1))
+            test_image = calculate_z(iX, test_image, num_components)
+            pz = p_of_z(iX, test_image, num_components)
+            if current_z is None:
+                current_z = pz
+            else:
+                if current_z <= pz or pz is np.nan:
+                    print("converged. Breaking.")
+                    break
+            print("p(z) = %s" % pz)
+            # print("X_test at iteration %s: %s" % (i, X_test))
+            print("iteration %s took %.01f" % (i+1, time() - start_time))
+        results[index, :] = test_image
+    return results
+
+
+
 def de_noise_image(X_train, X_test, num_components, num_iterations):
     iX_test = np.copy(X_test)
     iX = np.copy(X_train)
@@ -162,7 +189,7 @@ def de_noise_image(X_train, X_test, num_components, num_iterations):
 
 
 if __name__ == '__main__':
-    train_count = 256
+    train_count = 3000
     test_data_point = 777
     num_components = 1
     num_iterations = 1
@@ -170,11 +197,13 @@ if __name__ == '__main__':
     usps_data, usps_target = datasets.usps_scikit()
     X_train, X_test, Y_train, Y_test = train_test_split(usps_data, usps_target, train_size=0.7, random_state=42)
     X = X_train[0:train_count]
-    X_test = X_test[test_data_point]
+    clean_image = X_test[test_data_point]
     true_label = Y_test[test_data_point] - 1
-    #drawImage(X_test, title="%s:%s Before noise" % (true_label, num_components), dontDraw=False)
-    X_test = add_noise(X_test, 'speckle')
-    #drawImage(X_test, title="%s:%s After noise" % (true_label, num_components), dontDraw=False)
 
-    X_test = de_noise_image(X, X_test, num_components, num_iterations)
-    drawImage(X_test, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
+    noisy_image = add_noise(clean_image, 'speckle')
+    de_noised_image = de_noise_image(X, noisy_image, num_components, num_iterations)
+
+
+    drawImage(clean_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
+    drawImage(noisy_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
+    drawImage(de_noised_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
