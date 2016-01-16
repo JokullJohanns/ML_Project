@@ -6,9 +6,13 @@ from sklearn.decomposition import PCA, KernelPCA
 from new_KernelPCA import de_noise_image
 
 def drawImage(image, shape):
-    plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
+    plt.imshow(np.reshape(image, shape), cmap=cm.Greys_r)
     plt.show()
 
+def saveImage(image, shape, name):
+    plt.imshow(np.reshape(image, shape), cmap=cm.Greys_r)
+    plt.axis('off')
+    plt.savefig(name, bbox_inches='tight', pad_inches=0)
 
 def pca_reduce(train_set, test_set, component_count, dev = None):
     pca = PCA(n_components=component_count)
@@ -126,6 +130,43 @@ def reduce_noise(train, test, components_n=256):
         test_denoised.append(denoised[i:i+TRAINING_COUNT])
     return test_denoised
 
+def generate_example2_new():
+    usps_data = datasets.usps_stored()
+
+    print("Starting to generate number images")
+    for nr in range(0,10):
+        print("Generating images for nr {0}".format(nr))
+        #drawImage(usps_data["test_clean"][nr],(16,16))
+        saveImage(usps_data["test_clean"][nr], (16,16), "data/denoised_usps/{0}/original_clean.png".format(nr))
+
+        #drawImage(usps_data["test_speckle"][nr],(16,16))
+        saveImage(usps_data["test_speckle"][nr], (16,16), "data/denoised_usps/{0}/original_speckle.png".format(nr))
+
+        #drawImage(usps_data["test_gaussian"][nr],(16,16))
+        saveImage(usps_data["test_gaussian"][nr], (16,16), "data/denoised_usps/{0}/original_gaussian.png".format(nr))
+        for comp_i, comp in enumerate([1,4,16,64,256]):
+            ###############PCA###############
+            print("Starting {0} training with {1} noise and component_n {2}".format("linearPCA","speckle",comp))
+            linear_speckle_numbers = pca_reduce(usps_data["train"], usps_data["test_speckle"], comp)
+            #drawImage(linear_speckle_numbers[nr],(16,16))
+            saveImage(linear_speckle_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"linearPCA","speckle"))
+
+            print("Starting {0} training with {1} noise and component_n {2}".format("linearPCA","gaussian",comp))
+            linear_gaussian_numbers = pca_reduce(usps_data["train"], usps_data["test_gaussian"],comp)
+            #drawImage(linear_gaussian_numbers[nr],(16,16))
+            saveImage(linear_gaussian_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"linearPCA","gaussian"))
+
+            ###############Kernel PCA###############
+            print("Starting {0} training with {1} noise and component_n {2}".format("kernelPCA","speckle",comp))
+            kernel_speckle_numbers = kernel_pca_reduce(usps_data["train"], usps_data["test_speckle"], comp)
+            #drawImage(kernel_speckle_numbers[nr],(16,16))
+            saveImage(kernel_speckle_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"kernelPCA","speckle"))
+
+            print("Starting {0} training with {1} noise and component_n {2}".format("linear","gaussian",comp))
+            kernel_gaussian_numbers = kernel_pca_reduce(usps_data["train"], usps_data["test_gaussian"],comp)
+            #drawImage(kernel_gaussian_numbers[nr],(16,16))
+            saveImage(kernel_gaussian_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"kernelPCA","gaussian"))
+
 
 if __name__ == '__main__':
     """
@@ -137,7 +178,8 @@ if __name__ == '__main__':
     drawImage(denoised_test[3][0],(16,16))
     """
     
-    toy1()
+    #toy1()
+    generate_example2_new()
     quit()
 
     #test_image_size = 16

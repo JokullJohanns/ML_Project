@@ -16,6 +16,19 @@ class datasets:
 		return usps.data, usps.target
 
 	@staticmethod
+	def usps_stored():
+		data = {}
+		path = os.path.realpath(__file__)
+		train_path = os.path.abspath(os.path.join(path,'../data/train_data.mat'))
+		data["train"] = loadmat(train_path)['X']
+		test_path = os.path.abspath(os.path.join(path,'../data/test.mat'))
+		test = loadmat(test_path)
+		data["test_speckle"] = test['speckle']
+		data["test_gaussian"] = test['gaussian']
+		data["test_clean"] = test['test']
+		return data
+
+	@staticmethod
 	def usps(noise_type=None):
 		usps = fetch_mldata('usps')
 		train_dataset = [[] for _ in range(10)]
