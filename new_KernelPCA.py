@@ -35,16 +35,13 @@ def add_noise(image, noise_type):
 
 
 def K(x, y, N=1.0):
-    #start_time = time()
     c = 0.5
     ret = -1.0 * spatial.distance.sqeuclidean(x, y)
     ret = np.exp(ret / c) / N
-    #print("K took %s seconds" % (time() - start_time))
     return ret
 
 
 def centered_kernel_matrix(X):
-    print("starting centered kernel matrix")
     num_data_points = X.shape[0]
     k_matrix = items['kernel matrix']
     cen_k_matrix = np.zeros(k_matrix.shape)
@@ -55,42 +52,32 @@ def centered_kernel_matrix(X):
                 (np.sum(k_matrix[index_i, :]) / num_data_points) - \
                 (np.sum(k_matrix[index_j, :]) / num_data_points) + \
                 (np.sum(k_matrix) / (num_data_points ** 2))
-    print("finished centered kernel matrix")
     return cen_k_matrix
 
 
 def kernel_matrix(X, centered=True):
-    print("starting kernel matrix")
     if 'kernel matrix' not in items:
         num_data_points = X.shape[0]
         k_matrix = np.zeros([X.shape[0], X.shape[0]])
         for i in range(num_data_points):
             for j in range(num_data_points):
-                print("Now at (%s, %s)" % (i, j))
                 k_matrix[i, j] = K(X[i], X[j], num_data_points)
         items['kernel matrix'] = k_matrix
-    print("done with first part of kernel matrix. Checking for centered requirement")
     if centered:
-        print("starting centering")
         if 'centered kernel matrix' not in items:
             items['centered kernel matrix'] = centered_kernel_matrix(items['kernel matrix'])
         return items['centered kernel matrix']
-    print("finished kernel matrix")
-
     return items['kernel matrix']
 
 
 def eigen_decomp(X):
-    print("in eigen decomp")
     cen_k_matrix = kernel_matrix(X, centered=True)
-    print("done with kernel matrix, starting actual eigen decomp")
     if 'eigen vectors' not in items:
         eig_val, eig_vec = linalg.eig(cen_k_matrix)
         idx = eig_val.argsort()[::-1]
         eig_val_sorted = eig_val[idx]
         eig_vec_sorted = eig_vec[:, idx]
         items['eigen vectors'] = eig_vec_sorted.astype(float)
-    print("done with eigen decomp")
     return items['eigen vectors']
 
 
@@ -113,7 +100,6 @@ def gamma(X, X_test, no_of_comp, i):
 
 
 def calculate_z(X, X_test, no_of_comp):
-    #print("calculate z")
     numerator = 0.0
     denominator = 0.0
     z = np.copy(X_test)
@@ -129,12 +115,10 @@ def calculate_z(X, X_test, no_of_comp):
     for i in range(X.shape[0]):
         denominator += gamma(X, X_test, no_of_comp, i) * K(z, X[i, :], 1)
 
-    #print("numerator:%s, denominator: %s" % (numerator, denominator))
     return numerator / denominator
 
 
 def p_of_z(X, X_test, no_of_comp):
-    #print("p of z")
     ret = 0.0
     for i in range(X.shape[0]):
         ret += gamma(X, X_test, no_of_comp, i) * K(X_test, X[i, :], 1)
@@ -145,11 +129,19 @@ def de_noise_image(X_train, X_test, num_components, num_iterations):
     iX_test = np.copy(X_test)
     iX = np.copy(X_train)
 
+    current_z = None
+
     for i in range(num_iterations):
         start_time = time()
         print("iteration %s" % (i+1))
         iX_test = calculate_z(iX, iX_test, num_components)
         pz = p_of_z(iX, iX_test, num_components)
+        if current_z is None:
+            current_z = pz
+        else:
+            if current_z <= pz:
+                print("converged. Breaking.")
+                break
         print("p(z) = %s" % pz)
         # print("X_test at iteration %s: %s" % (i, X_test))
         print("iteration %s took %.01f" % (i+1, time() - start_time))
