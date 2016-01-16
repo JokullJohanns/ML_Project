@@ -85,23 +85,20 @@ class datasets:
 		return dataset
 
 	@staticmethod
-	def toy1(standard_dev):
-		return pickle.load( open("data/toy_data({0}).p".format(standard_dev), "rb"))
-		'''
-		d_train = []
-		d_test = []
-		mean = np.array([0 for _ in range(10)])
-		cov = np.eye(10) * standard_dev**2
-		test_means = []
-		for i in range(11):
-			test_mean = np.random.uniform(-1.0, 1.0, 10)
-			test_means.extend([test_mean for _ in range(33)])
-			d_train.extend(np.random.multivariate_normal(mean, cov, 100))
-			d_test.extend(np.random.multivariate_normal(test_mean, cov, 33))
-		pickle.dump((d_train,d_test,test_means), open("data/toy_data({0}).p".format(standard_dev), "wb"))
-		return np.array(d_train), np.array(d_test), np.array(test_means)
-		'''
-
+	def toy1(standard_dev, dimensions = 10, NOcenters = 11):
+		#return pickle.load( open("data/toy_data({0}).p".format(standard_dev), "rb"))
+		
+		train = []
+		test = []
+		cov = np.eye(dimensions) * standard_dev**2
+		centers = []
+		for i in range(NOcenters):
+			center = np.random.uniform(-1.0, 1.0, dimensions)
+			centers.extend([center for _ in range(33)])
+			train.extend(np.random.multivariate_normal(center, cov, 100))
+			test.extend(np.random.multivariate_normal(center, cov, 33))
+		#pickle.dump((train,test,centers), open("data/toy_data({0}).p".format(standard_dev), "wb"))
+		return np.array(train), np.array(test), np.array(centers)		
 
 
 	@staticmethod

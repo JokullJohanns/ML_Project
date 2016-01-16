@@ -2,24 +2,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from Data import datasets
-
 from sklearn.decomposition import PCA, KernelPCA
 
 def drawImage(image, shape):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys)
     plt.show()
 
-def pca_reduce(train_set, test_set, component_count):
+
+def pca_reduce(train_set, test_set, component_count, dev = None):
     pca = PCA(n_components=component_count)
     pca.fit(train_set)
     transformed_test = pca.transform(test_set)
     return pca.inverse_transform(transformed_test)
 
-def kernel_pca_reduce(train_set, test_set, component_count):
-    kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True)
+
+def kernel_pca_reduce(train_set, test_set, component_count, dev = None):
+    if dev == None:
+        kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True)
+    else:
+        dim = np.shape(test_set)[1]
+        kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True, gamma = 1/(dim * 2 * dev**2))
     kpca.fit(train_set)
     transformed_test = kpca.transform(test_set)
     return kpca.inverse_transform(transformed_test)
+
 
 def squared_distance(instance1, instance2):
     distance = 0
@@ -27,24 +33,35 @@ def squared_distance(instance1, instance2):
         distance += pow((instance1[i] - instance2[i]), 2)
     return distance
 
-def calculate_score(data, centers):
-    return np.mean([squared_distance(datapoint, center) for datapoint, center in zip(data, centers)])
 
-def generate_toy_example(pca_function):
+def toy1():
+    linear_pca_score_matrix = generate_score_matrix(pca_reduce, 11)
+    kernel_pca_score_matrix = generate_score_matrix(kernel_pca_reduce, 11)
+
+    print(linear_pca_score_matrix)
+    print(kernel_pca_score_matrix)
+    print(linear_pca_score_matrix/kernel_pca_score_matrix)
+
+
+def generate_score_matrix(pca_function, NOcenters = 11):
     deviations = [0.05, 0.1, 0.2, 0.4, 0.8]
-    features = [i for i in range(1,10)]
+    features = [i for i in range(1, 10)]
     score_matrix = np.zeros((len(deviations),len(features)))
     for dev_i, dev in enumerate(deviations):
-        toy1_train, toy1_test, toy1_test_means = datasets.toy1(dev)
+        train, test, centers = datasets.toy1(dev, NOcenters)
         for f_i, feature_count in enumerate(features):
-            denoised_features = pca_function(toy1_train, toy1_test, feature_count)
-            score_matrix[dev_i][f_i] = calculate_score(denoised_features, toy1_test_means)
+            denoised_test = pca_function(train, test, feature_count) # Optional: include parameter 'dev'. Only affects KPCA. Seems to yield worse results.
+            score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
     return score_matrix
 
 
-def add_2D_noise(image, noise_area = [0, 1, 0, 1]):
+def calculate_score(data, centers):
+    return np.mean([squared_distance(datapoint, center) for datapoint, center in zip(data, centers)])
+
+
+def add_2D_noise(list, noise_area = [0, 1, 0, 1], noise_amount = 100):
     noisy_image = list(image)
-    for i in range(100):
+    for i in range(noise_amount):
         noisy_image.append([np.random.uniform(noise_area[0], noise_area[1]), np.random.uniform(noise_area[2], noise_area[3])])
     return noisy_image
 
@@ -118,13 +135,9 @@ if __name__ == '__main__':
     drawImage(noisy_usps_test[3][0],(16,16))
     drawImage(denoised_test[3][0],(16,16))
     """
-    toy2()
+    
+    toy1()
     quit()
-    linear_pca_score_matrix = generate_toy_example(pca_reduce)
-    kernel_pca_score_matrix = generate_toy_example(kernel_pca_reduce)
-
-    print(kernel_pca_score_matrix/linear_pca_score_matrix)
-    print(linear_pca_score_matrix/kernel_pca_score_matrix)
 
     #test_image_size = 16
     #image_circle = datasets.half_circle(test_image_size)
