@@ -43,19 +43,19 @@ def toy1():
     linear_pca_score_matrix = generate_score_matrix(pca_reduce)
     kernel_pca_score_matrix = generate_score_matrix(de_noise_image)
 
-    print(linear_pca_score_matrix)
-    print(kernel_pca_score_matrix)
-    print(linear_pca_score_matrix/kernel_pca_score_matrix)
+    print("Linear PCA: ", linear_pca_score_matrix)
+    print("Kernel PCA: ", kernel_pca_score_matrix)
+    print("Ratio: ", linear_pca_score_matrix/kernel_pca_score_matrix)
 
 
-def generate_score_matrix(pca_function, NOcenters = 11):
+def generate_score_matrix(pca_function):
     deviations = [0.05, 0.1, 0.2, 0.4, 0.8]
     features = [i for i in range(1, 10)]
     score_matrix = np.zeros((len(deviations),len(features)))
     for dev_i, dev in enumerate(deviations):
-        train, test, centers = datasets.toy1(dev, NOcenters)
+        train, test, centers = datasets.toy1(dev)
         for f_i, feature_count in enumerate(features):
-            denoised_test = pca_function(train, test, feature_count, 5) # Optional: include parameter 'dev'. Only affects KPCA. Seems to yield worse results.
+            denoised_test = pca_function(train, test, feature_count, 5) # Optional: include parameter 'dev'. Only affects sklearn KPCA. Seems to yield worse results.
             score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
     return score_matrix
 
