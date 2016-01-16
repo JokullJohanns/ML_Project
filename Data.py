@@ -29,6 +29,15 @@ class datasets:
 		return data
 
 	@staticmethod
+	def usps_stored_test():
+		data = {}
+		path = os.path.realpath(__file__)
+		train_path = os.path.abspath(os.path.join(path,'../data/test.mat'))
+		test = loadmat(train_path)
+		speckle = test['speckle']
+		return speckle
+
+	@staticmethod
 	def usps(noise_type=None):
 		usps = fetch_mldata('usps')
 		train_dataset = [[] for _ in range(10)]
@@ -108,7 +117,7 @@ class datasets:
 		for i in range(NOcenters):
 			center = np.random.uniform(-1.0, 1.0, dimensions)
 			centers.extend([center for _ in range(33)])
-			train.extend(np.random.multivariate_normal(center, cov, 10))
+			train.extend(np.random.multivariate_normal(center, cov, 60))
 			test.extend(np.random.multivariate_normal(center, cov, 5))
 		#pickle.dump((train,test,centers), open("data/toy_data({0}).p".format(standard_dev), "wb"))
 		return np.array(train), np.array(test), np.array(centers)		
