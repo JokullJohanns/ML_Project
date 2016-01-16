@@ -1,0 +1,400 @@
+\documentclass[a4paper,english]{article}
+\usepackage[utf8]{inputenc}
+\renewcommand{\rmdefault}{cmr}
+\renewcommand{\familydefault}{\rmdefault}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=30mm,bmargin=30mm,lmargin=25mm,rmargin=25mm}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\setcounter{tocdepth}{2}
+\setlength{\parskip}{\smallskipamount}
+\setlength{\parindent}{0pt}
+\usepackage{babel}
+\usepackage{textcomp}
+\usepackage{amstext}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsmath, bm}
+\usepackage{mathtools}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\Ginclude@eps}{"#1"}{#1}{}{}
+\makeatother
+\usepackage[numbers]{natbib}
+\usepackage[unicode=true,
+ bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+ \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+
+ 
+\begin{document}
+
+\title{Kernel PCA and De-Noising in Feature Spaces \\ \large{Final Project in DD2434 - Machine Learning, Advanced Course, at KTH}}
+
+\author{
+Group 13\\ \\[0.05cm]
+\begin{tabular}{ccccc}
+K. Hannesson & J. Jóhannsson & X. Lin & S. Mittal & S. Murray \\
+\normalsize{820820-7954} & \normalsize{XXXXXX-XXXX} & \normalsize{930724-5481} & \normalsize{930329-7817} & \normalsize{931107-1873} \\
+{\small hannesso@kth.se} & {\small jokull@kth.se} & {\small xinyil@kth.se} & {\small smittal@kth.se} & {\small samuelmu@kth.se} \\ \\[0.05cm]
+\\[0.7cm]
+\end{tabular}
+}
+
+\date{\today}
+
+\pagestyle{fancy}
+\setlength{\headheight}{15pt}
+\fancyhf{}
+\lhead{DD2434 mladv15} % DO NOT REMOVE!!!!
+\rhead{K. Hannesson, J. Jóhannsson, X. Lin, S. Mittal, S. Murray} %% UPDATE WITH YOUR NAMES
+\fancyfoot[C]{\thepage}
+
+\maketitle
+
+
+\begin{abstract}
+Such abstract, very words.
+\end{abstract}
+\clearpage
+
+\thispagestyle{fancy}
+
+\begin{table}[]
+\centering
+\caption{My caption}
+\label{my-label}
+\begin{tabular}{r|llllllllll|llllllllll|}
+\cline{2-21}
+                             & \multicolumn{10}{c|}{Gaussian noise}  & \multicolumn{10}{c|}{'speckle' noise} \\ \hline
+\multicolumn{1}{|r|}{orig.}  & \includegraphics[height=0.4cm]{denoised_usps/9/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/original_clean.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/original_clean.png}
+							\\
+\multicolumn{1}{|r|}{noisy}  & \includegraphics[height=0.4cm]{denoised_usps/9/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/original_gaussian.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/original_speckle.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/original_speckle.png}
+							\\ \hline
+\multicolumn{1}{|r|}{n  = 1} & \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_speckle_1.png}
+							\\
+\multicolumn{1}{|r|}{4}      & \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_speckle_4.png}
+							\\
+\multicolumn{1}{|r|}{16}     & \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_speckle_16.png}
+							\\
+\multicolumn{1}{|r|}{64}     & \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_speckle_64.png}
+							\\
+\multicolumn{1}{|r|}{256}     & \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/linearPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/linearPCA_speckle_256.png}
+							\\ \hline
+\multicolumn{1}{|r|}{n = 1}  & \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_gaussian_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_speckle_1.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_speckle_1.png}
+							\\
+\multicolumn{1}{|r|}{4}      & \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_gaussian_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_speckle_4.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_speckle_4.png}
+							\\
+\multicolumn{1}{|r|}{16}     & \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_gaussian_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_speckle_16.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_speckle_16.png}
+							\\
+\multicolumn{1}{|r|}{64}     & \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_gaussian_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_speckle_64.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_speckle_64.png}
+							\\
+\multicolumn{1}{|r|}{256}    & \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_gaussian_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/9/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/0/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/1/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/2/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/3/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/4/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/5/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/6/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/7/kernelPCA_speckle_256.png} 
+							& \includegraphics[height=0.4cm]{denoised_usps/8/kernelPCA_speckle_256.png}
+							\\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\centering
+\caption{My caption}
+\label{my-label}
+\begin{tabular}{llllllllllllllllllllll}
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_1.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_2.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_3.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_4.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_5.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_6.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_7.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_8.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_9.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_10.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_11.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_12.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_13.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_14.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_15.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_16.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_17.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_18.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_19.png}
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_linearPCA_20.png}
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_clean.png} 
+ \\
+&  \tiny{1.02}
+ &  \tiny{1.13}
+ &  \tiny{1.07}
+ &  \tiny{1.09}
+ &  \tiny{1.1}
+ &  \tiny{1.01}
+ &  \tiny{0.96}
+ &  \tiny{0.97}
+ &  \tiny{0.96}
+ &  \tiny{0.97}
+ &  \tiny{0.97}
+ &  \tiny{0.96}
+ &  \tiny{0.92}
+ &  \tiny{0.96}
+ &  \tiny{0.96}
+ &  \tiny{0.96}
+ &  \tiny{0.94}
+ &  \tiny{0.94}
+ &  \tiny{0.93}
+ &  \tiny{0.93}
+ \\ 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_1.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_2.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_3.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_4.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_5.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_6.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_7.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_8.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_9.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_10.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_11.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_12.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_13.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_14.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_15.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_16.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_17.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_18.png} 
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_19.png}
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_kernelPCA_20.png}
+ &  \includegraphics[height=0.4cm]{fraction_usps/three_clean.png} 
+ \\
+\end{tabular}
+\end{table}
+
+\end{document}
