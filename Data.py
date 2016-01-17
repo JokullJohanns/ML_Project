@@ -108,7 +108,7 @@ class datasets:
 
 	@staticmethod
 	def toy1(standard_dev, dimensions = 10, NOcenters = 11):
-		#return pickle.load( open("data/toy_data({0}).p".format(standard_dev), "rb"))
+		return pickle.load( open("data/toy_data({0}).p".format(standard_dev), "rb"))
 		NOtrainingpoints = 10
 		NOtestingpoints = 5
 		train = []
@@ -122,7 +122,27 @@ class datasets:
 			test.extend(np.random.multivariate_normal(center, cov, NOtestingpoints))
 		#pickle.dump((train,test,centers), open("data/toy_data({0}).p".format(standard_dev), "wb"))
 		return np.array(train), np.array(test), np.array(centers)
-		
+
+	@staticmethod
+	def load_toy_mat(standard_dev):
+		path = os.path.realpath(__file__)
+		file_path = os.path.abspath(os.path.join(path,'../data/toy_1_data_{0}.mat'.format(standard_dev)))
+		data = loadmat(file_path)
+		return data["train"],data["test"],data["centers"]
+
+	@staticmethod
+	def load_kernel_denoised():
+		path = os.path.realpath(__file__)
+		file_path = os.path.abspath(os.path.join(path,'../data/pre_images_three.mat'))
+		data = loadmat(file_path)
+		return data['pre_images']
+
+	@staticmethod
+	def load_samuel(std_dev):
+		path = os.path.realpath(__file__)
+		file_path = os.path.abspath(os.path.join(path,'../data/Toy1_kpca_pre_images/pre_images_{0}.mat'.format(std_dev)))
+		data = loadmat(file_path)
+		return data['pre_images']
 
 	@staticmethod
 	def square():

@@ -4,8 +4,9 @@ import matplotlib.cm as cm
 from Data import datasets
 from sklearn.decomposition import PCA, KernelPCA
 from new_KernelPCA import de_noise_image
+import tabulate
 
-def drawImage(image, shape):
+def drawImage(image, shape=(16,16)):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys_r)
     plt.axis('off')
     plt.show()
@@ -13,6 +14,9 @@ def drawImage(image, shape):
 def saveImage(image, shape, name):
     plt.imshow(np.reshape(image, shape), cmap=cm.Greys_r)
     plt.axis('off')
+    cur_axes = plt.gca()
+    cur_axes.axes.get_xaxis().set_visible(False)
+    cur_axes.axes.get_yaxis().set_visible(False)
     plt.savefig(name, bbox_inches='tight', pad_inches=0)
 
 def pca_reduce(train_set, test_set, component_count, dev = None):
@@ -26,6 +30,7 @@ def kernel_pca_reduce(train_set, test_set, component_count, dev = None):
     if dev == None:
         kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True)
     else:
+        print("Changing the dev parameter")
         dim = np.shape(test_set)[1]
         kpca = KernelPCA(kernel="rbf", n_components=component_count, fit_inverse_transform=True, gamma = 1/(dim * 2 * dev**2))
     kpca.fit(train_set)
@@ -41,12 +46,20 @@ def squared_distance(instance1, instance2):
 
 
 def toy1():
-    linear_pca_score_matrix = generate_score_matrix(pca_reduce)
-    kernel_pca_score_matrix = generate_score_matrix(kernel_pca_reduce)
+    linear_pca_score_matrix, kernel_pca_score_matrix = generate_score_matrix2()
+    #kernel_pca_score_matrix = generate_score_matrix(kernel_pca_reduce)
 
     #print("Linear PCA: ", linear_pca_score_matrix)
     #print("Kernel PCA: ", kernel_pca_score_matrix)
-    print("Ratio: ", linear_pca_score_matrix/kernel_pca_score_matrix)
+    #print("Ratio: ", linear_pca_score_matrix/kernel_pca_score_matrix)
+    results = np.around(linear_pca_score_matrix/kernel_pca_score_matrix,decimals=2)
+    res = np.zeros((results.shape[0], results.shape[1]+1))
+    res[:, 1:] = results
+    res = np.around(res, 4)
+    res[:, 0] = np.array([0.05, 0.1, 0.2, 0.4, 0.8])
+
+
+    print(tabulate.tabulate(res, tablefmt="latex_booktabs", headers=[i for i in range(1, 10)]))
 
 
 def generate_score_matrix(pca_function):
@@ -54,12 +67,29 @@ def generate_score_matrix(pca_function):
     features = [i for i in range(1, 10)]
     score_matrix = np.zeros((len(deviations),len(features)))
     for dev_i, dev in enumerate(deviations):
-        train, test, centers = datasets.toy1(dev)
+        train, test, centers = datasets.load_toy_mat(dev)
         for f_i, feature_count in enumerate(features):
             denoised_test = pca_function(train, test, feature_count) # Optional: include parameter 'dev'. Only affects sklearn KPCA. Seems to yield worse results.
             score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
     return score_matrix
 
+def generate_score_matrix2():
+    deviations = [0.05, 0.1, 0.2, 0.4, 0.8]
+    features = [i for i in range(1, 10)]
+    linear_score_matrix = np.zeros((len(deviations),len(features)))
+    kernel_score_matrix = np.zeros((len(deviations),len(features)))
+    for dev_i, dev in enumerate(deviations):
+        train, test, centers = datasets.load_toy_mat(dev)
+        kernel_data = np.array(datasets.load_samuel(dev))
+        where_nans = np.isnan(kernel_data)
+        kernel_data[where_nans] = 0
+        for f_i, feature_count in enumerate(features):
+            denoised_test = pca_reduce(train, test, feature_count) # Optional: include parameter 'dev'. Only affects sklearn KPCA. Seems to yield worse results.
+            linear_score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
+            kernel_score_matrix[dev_i][f_i] = calculate_score(kernel_data[:,(f_i*10):((f_i+1)*10)],centers)
+
+
+    return linear_score_matrix,kernel_score_matrix
 
 def calculate_score(data, centers):
     return np.mean([squared_distance(datapoint, center) for datapoint, center in zip(data, centers)])
@@ -158,6 +188,7 @@ def generate_figure4():
             #drawImage(linear_gaussian_numbers[nr],(16,16))
             saveImage(linear_gaussian_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"linearPCA","gaussian"))
 
+            '''
             ###############Kernel PCA###############
             print("Starting {0} training with {1} noise and component_n {2}".format("kernelPCA","speckle",comp))
             kernel_speckle_numbers = kernel_pca_reduce(usps_data["train"], usps_data["test_speckle"], comp)
@@ -168,38 +199,41 @@ def generate_figure4():
             kernel_gaussian_numbers = kernel_pca_reduce(usps_data["train"], usps_data["test_gaussian"],comp)
             #drawImage(kernel_gaussian_numbers[nr],(16,16))
             saveImage(kernel_gaussian_numbers[nr], (16,16), "data/denoised_usps/{0}/{2}_{3}_{1}.png".format(nr, comp,"kernelPCA","gaussian"))
+            '''
 
 def generate_figure3():
     usps_data = datasets.usps_stored()
     scores = []
     saveImage(usps_data["test_clean"][2],(16,16),"data/fraction_usps/three_clean.png")
+    kernel_denoised = datasets.load_kernel_denoised()
     for comp_count in range(1,21):
-        print("Starting training for {0} components for number 3".format(comp_count))
-        pca_denoised = pca_reduce(usps_data["train"], usps_data["test_clean"],comp_count)
-        pca_score = np.sum((pca_denoised[2]-usps_data["test_clean"][2])**2)
+            #print("Starting training for {0} components for number 3".format(comp_count))
+            pca_denoised = pca_reduce(usps_data["train"], usps_data["test_clean"], comp_count)
+            pca_score = np.sum(np.power((pca_denoised[2] - usps_data["test_clean"][2]), 2))
 
-        kernel_pca_denoised = kernel_pca_reduce(usps_data["train"], usps_data["test_clean"],comp_count)
-        kernel_pca_score = np.sum((kernel_pca_denoised[2]-usps_data["test_clean"][2])**2)
-        final_score = pca_score/kernel_pca_score
-        scores.append(round(final_score,2))
-        saveImage(pca_denoised[2],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('linearPCA',comp_count))
-        saveImage(kernel_pca_denoised[2],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('kernelPCA',comp_count))
+            #kernel_pca_denoised = kernel_pca_reduce(usps_data["train"], usps_data["test_clean"], comp_count)
+            kernel_pca_score = np.sum(np.power((kernel_denoised[comp_count-1] - usps_data["test_clean"][2]), 2))
+
+            final_score = pca_score/kernel_pca_score
+            scores.append(round(final_score,2))
+            saveImage(pca_denoised[2],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('linearPCA',comp_count))
+            saveImage(kernel_denoised[comp_count-1],(16,16),"data/fraction_usps/three_{0}_{1}.png".format('kernelPCA',comp_count))
 
     f = open("data/fraction_usps/scores.txt","w")
     f.write("&  \\tiny{"+"}\n &  \\tiny{".join(map(str, scores))+"}")
 
 def draw_eigenvectors():
     usps_data = datasets.usps_stored()
-    '''
+
     pca = PCA(n_components=256)
     pca.fit(usps_data["train"])
     eigenvectors = pca.components_
     for i in [1,2,4,16,32,64,128,256]:
         #drawImage(eigenvectors[i-1],(16,16))
         saveImage(eigenvectors[i-1],(16,16),"data/eigenvectors_images/linearPCA_eigen_{0}.png".format(i))
+
+
     '''
-
-
     kpca = KernelPCA(kernel="rbf", n_components=256, fit_inverse_transform=True)
     kpca.fit(usps_data["train"])
     print(kpca.alpha)
@@ -207,6 +241,7 @@ def draw_eigenvectors():
         pass
         #print(kpca.alphas_.T[i-1].shape)
         #drawImage(kpca.alphas_.T[i-1],(15,150))
+    '''
 
 
 
@@ -221,10 +256,25 @@ if __name__ == '__main__':
     drawImage(noisy_usps_test[3][0],(16,16))
     drawImage(denoised_test[3][0],(16,16))
     """
+    trainList = [ np.arange(-1,1,0.5)+1,
+                            np.arange(-1,1,0.5)+2,
+                            np.arange(-1,1,0.5)+3,
+                            np.arange(-1,1,0.5)+4,
+                            ]
+    testList = np.arange(-1,1,0.5)+6
 
-    #draw_eigenvectors()
+    #print(trainList)
+    #print(testList)
+
+    #print(testList)
+    #denoised_testing = kernel_pca_reduce(trainList,testList,3)
+    #print(denoised_testing[0])
+    #quit()
+
+
+    draw_eigenvectors()
     #generate_figure3()
-    toy1()
+    #toy1()
     #generate_figure4()
     quit()
 
