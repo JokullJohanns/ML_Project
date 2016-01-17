@@ -9,7 +9,6 @@ import matplotlib.cm as cm
 from skimage.util import random_noise
 from sklearn.cross_validation import train_test_split
 from time import time
-import numba
 
 # plt.interactive(True)
 
@@ -34,7 +33,6 @@ def add_noise(image, noise_type):
     return image
 
 
-@numba.jit(nopython=True)
 def K(x, y, N=1.0, std_dev=-999):
     c = 9.0
     # if std_dev == -999:
