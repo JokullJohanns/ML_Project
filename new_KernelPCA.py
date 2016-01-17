@@ -9,6 +9,7 @@ import matplotlib.cm as cm
 from skimage.util import random_noise
 from sklearn.cross_validation import train_test_split
 from time import time
+import numba
 
 # plt.interactive(True)
 
@@ -33,9 +34,17 @@ def add_noise(image, noise_type):
     return image
 
 
-def K(x, y, N=1.0):
-    c = 0.5
-    ret = -1.0 * spatial.distance.sqeuclidean(x, y)
+@numba.jit(nopython=True)
+def K(x, y, N=1.0, std_dev=-999):
+    c = 9.0
+    # if std_dev == -999:
+    #     c = 0.5
+    # else:
+    #     c = 2.0 * (std_dev * std_dev)
+    # ret = -1.0 * spatial.distance.sqeuclidean(x, y)
+
+    ret = -1.0 * np.sum(np.power((x-y), 2))
+    #ret = -1.0 * (np.power(np.linalg.norm(x-y), 2))
     ret = np.exp(ret / c) / N
     return ret
 
@@ -54,13 +63,13 @@ def centered_kernel_matrix(X):
     return cen_k_matrix
 
 
-def kernel_matrix(X, centered=True):
+def kernel_matrix(X, centered=True, std_dev=-999):
     if 'kernel matrix' not in items:
         num_data_points = X.shape[0]
         k_matrix = np.zeros([X.shape[0], X.shape[0]])
         for i in range(num_data_points):
             for j in range(num_data_points):
-                k_matrix[i, j] = K(X[i], X[j], num_data_points)
+                k_matrix[i, j] = K(X[i], X[j], num_data_points, std_dev)
         items['kernel matrix'] = k_matrix
     if centered:
         if 'centered kernel matrix' not in items:
@@ -70,7 +79,7 @@ def kernel_matrix(X, centered=True):
 
 
 def eigen_decomp(X):
-    cen_k_matrix = kernel_matrix(X, centered=True)
+    cen_k_matrix = kernel_matrix(X, centered=True, std_dev=-999)
     if 'eigen vectors' not in items:
         eig_val, eig_vec = linalg.eig(cen_k_matrix)
         idx = eig_val.argsort()[::-1]
@@ -80,130 +89,117 @@ def eigen_decomp(X):
     return items['eigen vectors']
 
 
-def beta_test_point(X, X_test, no_of_comp):
-    num_data_points = X.shape[0]
-    beta = np.zeros((no_of_comp, 1))
-    eig_vec_sorted = eigen_decomp(X)
-    for k in range(no_of_comp):
-        for i in range(num_data_points):
-            beta[k] += eig_vec_sorted[i][k] * K(X_test, X[i, :], 1)
-    return beta, eig_vec_sorted
+def beta_test_point(X, X_test, num_comp, std_dev=-999):
+    if 'beta' not in items:
+        N = X.shape[0]
+        beta = np.zeros(num_comp)
+        eig_vec_sorted = eigen_decomp(X)
+
+        for k in range(num_comp):
+            for i in range(N):
+                beta[k] += eig_vec_sorted[i][k] * K(X_test, X[i, :], 1, std_dev)
+        items['beta'] = beta
+    return items['beta']
 
 
-def gamma(X, X_test, no_of_comp, i):
-    betas, eigen_vectors = beta_test_point(X, X_test, no_of_comp)
-    gamma_val = 0.0
-    for j in range(no_of_comp):
-        gamma_val += betas[j] * eigen_vectors[j, i]
-    return gamma_val
+def gamma(X, X_test, num_comp, std_dev=-999):
+    if 'gamma' not in items:
+        beta = beta_test_point(X, X_test, num_comp, std_dev)
+        eigen_vectors = eigen_decomp(X)
+
+        gammas = np.zeros(X.shape[0])
+        for gamma_index in range(gammas.shape[0]):
+            for comp in range(num_comp):
+                gammas[gamma_index] = beta[comp] * eigen_vectors[gamma_index, comp]
+        items['gamma'] = gammas
+    return items['gamma']
 
 
-def calculate_z(X, X_test, no_of_comp):
+def calculate_z(X, test_image, z, num_components, num_iterations, std_dev=-999):
     numerator = 0.0
     denominator = 0.0
-    z = np.copy(X_test)
-    # if iteration == 0:
-    #     z = np.average(X, 0)
-    # else:
-    #     z = np.copy(X_test)
+    z = np.copy(test_image)
 
-    # Calculate numerator
-    for i in range(X.shape[0]):
-        numerator += gamma(X, X_test, no_of_comp, i) * K(z, X[i, :], 1) * X[i]
+    if num_iterations == 0:  # Calculate gamma
+        gamma(X, test_image, num_components, std_dev)
+    gammas = items['gamma']
 
+
+    # Calculate numerator and denominator
     for i in range(X.shape[0]):
-        denominator += gamma(X, X_test, no_of_comp, i) * K(z, X[i, :], 1)
+        val = gammas[i] * K(z, X[i, :], 1, std_dev)
+        numerator += val * X[i]
+        denominator += val
 
     return numerator / denominator
 
 
-def p_of_z(X, X_test, no_of_comp):
+def p_of_z(X, z, std_dev=-999):
+    gammas = items['gamma']
     ret = 0.0
     for i in range(X.shape[0]):
-        ret += gamma(X, X_test, no_of_comp, i) * K(X_test, X[i, :], 1)
+        ret += gammas[i] * K(z, X[i, :], 1, std_dev)
     return ret  # TODO: add Omega value
 
 
-def de_noise_image_multiple(X_train, X_test, num_components, num_iterations):
-    iX = np.copy(X_train)
-
+def de_noise_image_multiple(X_train, X_test, num_components, num_iterations, std_dev=-999):
+    print("starting with num compontents: %s, num iterations: %s, std dev: %s" % (num_components, num_iterations, std_dev))
     results = np.zeros(X_test.shape)
 
     for index in range(X_test.shape[0]):
         print("****** starting on test image %s ******" % (index))
-        current_z = None
+        current_pz = None
+        z = np.copy(X_test[index])
         test_image = np.copy(X_test[index])
         for i in range(num_iterations):
-            start_time = time()
-            print("iteration %s" % (i+1))
-            test_image = calculate_z(iX, test_image, num_components)
-            pz = p_of_z(iX, test_image, num_components)
-            if current_z is None:
-                current_z = pz
+            z = calculate_z(X_train, test_image, z, num_components, i, std_dev)
+            pz = p_of_z(X_train, z, std_dev)
+            if current_pz is None:
+                current_pz = pz
             else:
-                if current_z <= pz or pz is np.nan:
-                    print("converged. Breaking.")
+                if current_pz <= pz or pz is np.nan:
                     break
-            print("p(z) = %s" % pz)
-            # print("X_test at iteration %s: %s" % (i, X_test))
-            print("iteration %s took %.01f" % (i+1, time() - start_time))
-        results[index, :] = test_image
+        results[index, :] = z
     return results
 
 
 
-def de_noise_image(X_train, X_test, num_components, num_iterations):
-    iX_test = np.copy(X_test)
-    iX = np.copy(X_train)
-
-    current_z = None
-
+def de_noise_image(X_train, X_test, num_components, num_iterations, std_dev=-999):
+    current_pz = None
+    z = np.copy(X_test)
+    test_image = np.copy(X_test)
     for i in range(num_iterations):
-        start_time = time()
-        print("iteration %s" % (i+1))
-        iX_test = calculate_z(iX, iX_test, num_components)
-        pz = p_of_z(iX, iX_test, num_components)
-        if current_z is None:
-            current_z = pz
+        print("Starting on iteration %s" % i)
+        z = calculate_z(X_train, test_image, z, num_components, i, std_dev)
+        pz = p_of_z(X_train, z, std_dev)
+        if current_pz is None:
+            current_pz = pz
         else:
-            if current_z <= pz:
-                print("converged. Breaking.")
+            if current_pz <= pz or pz is np.nan:
                 break
-        print("p(z) = %s" % pz)
-        # print("X_test at iteration %s: %s" % (i, X_test))
-        print("iteration %s took %.01f" % (i+1, time() - start_time))
-    return iX_test
+    return z
 
-    # current_pz = None
-    # de_noised_image = np.copy(noised_image)
-    # for i in range(num_iterations):
-    #     print("Starting iteration %s" % (i+1))
-    #     de_noised_image = calculate_z(training_set, de_noised_image, num_components)
-    #     pz = p_of_z(training_set, de_noised_image, num_components)
-    #     if current_pz is None:
-    #         current_pz = pz
-    #     else:
-    #         if current_pz <= pz:
-    #             break
-    # return de_noised_image
 
 
 if __name__ == '__main__':
-    train_count = 3000
-    test_data_point = 777
+    train_count = 400
+    test_data_point = 12
     num_components = 1
-    num_iterations = 1
+    num_iterations = 1000
 
     usps_data, usps_target = datasets.usps_scikit()
     X_train, X_test, Y_train, Y_test = train_test_split(usps_data, usps_target, train_size=0.7, random_state=42)
     X = X_train[0:train_count]
-    clean_image = X_test[test_data_point]
     true_label = Y_test[test_data_point] - 1
+    clean_image = X_test[test_data_point]
+    drawImage(clean_image, title="%s initial" % (true_label), dontDraw=False)
 
-    noisy_image = add_noise(clean_image, 'speckle')
+    cindy_data = datasets.usps_stored_test()
+    noisy_image = cindy_data[5]*-1
+
+    #noisy_image = add_noise(clean_image, 'speckle')
+    drawImage(noisy_image, title="%s noised" % (true_label), dontDraw=False)
+
     de_noised_image = de_noise_image(X, noisy_image, num_components, num_iterations)
-
-
-    drawImage(clean_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
-    drawImage(noisy_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
     drawImage(de_noised_image, title="%s:%s recovered" % (true_label, num_components), dontDraw=False)
+

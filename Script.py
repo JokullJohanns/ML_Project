@@ -56,7 +56,7 @@ def generate_score_matrix(pca_function):
     for dev_i, dev in enumerate(deviations):
         train, test, centers = datasets.toy1(dev)
         for f_i, feature_count in enumerate(features):
-            denoised_test = pca_function(train, test, feature_count, 0.5) # Optional: include parameter 'dev'. Only affects sklearn KPCA. Seems to yield worse results.
+            denoised_test = pca_function(train, test, feature_count) # Optional: include parameter 'dev'. Only affects sklearn KPCA. Seems to yield worse results.
             score_matrix[dev_i][f_i] = calculate_score(denoised_test, centers)
     return score_matrix
 
@@ -65,7 +65,7 @@ def calculate_score(data, centers):
     return np.mean([squared_distance(datapoint, center) for datapoint, center in zip(data, centers)])
 
 
-def add_2D_noise(list, noise_area = [0, 1, 0, 1], noise_amount = 100):
+def add_2D_noise(image, noise_area = [0, 1, 0, 1], noise_amount = 100):
     noisy_image = list(image)
     for i in range(noise_amount):
         noisy_image.append([np.random.uniform(noise_area[0], noise_area[1]), np.random.uniform(noise_area[2], noise_area[3])])
@@ -73,7 +73,7 @@ def add_2D_noise(list, noise_area = [0, 1, 0, 1], noise_amount = 100):
 
 
 def toy2():
-    toy2circle(kernel_pca_reduce, 4)
+    toy2circle(de_noise_image, 4)
     #toy2square(kernel_pca_reduce, 4)
 
 
@@ -82,10 +82,11 @@ def toy2circle(pca_function, features):
     halfcircle = datasets.half_circle()
     noisy_halfcircle = add_2D_noise(halfcircle, axis)
 
-    denoised_halfcircle = pca_function(halfcircle, noisy_halfcircle, features)
-
     halfcircle = np.array(halfcircle)
     noisy_halfcircle = np.array(noisy_halfcircle)
+
+
+    denoised_halfcircle = pca_function(halfcircle, noisy_halfcircle, features, 5)
 
     plottoy2figure(halfcircle, noisy_halfcircle, denoised_halfcircle, axis)
 
@@ -95,10 +96,10 @@ def toy2square(pca_function, features):
     square = datasets.square()
     noisy_square = add_2D_noise(square, axis)
 
-    denoised_square = pca_function(square, noisy_square, features)
-
     square = np.array(square)
     noisy_square = np.array(noisy_square)
+
+    denoised_square = pca_function(square, noisy_square, features)
 
     plottoy2figure(square, noisy_square, denoised_square, axis)
 
@@ -220,6 +221,7 @@ if __name__ == '__main__':
     drawImage(noisy_usps_test[3][0],(16,16))
     drawImage(denoised_test[3][0],(16,16))
     """
+
     #draw_eigenvectors()
     #generate_figure3()
     toy1()
